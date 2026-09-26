@@ -1,0 +1,5780 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>온라인 체스</title>
+
+<style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  margin:0;
+  padding:0;
+  min-height:100%;
+  background:#0b1016;
+  color:#fff;
+  font-family:Arial,"Malgun Gothic",sans-serif;
+}
+
+body{
+  overflow-x:hidden;
+}
+
+button,input,select{
+  font:inherit;
+}
+
+button{
+  cursor:pointer;
+  touch-action:manipulation;
+}
+
+.app{
+  width:min(1450px,100%);
+  margin:auto;
+  padding:10px;
+}
+
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+.title{
+  margin:0;
+  font-size:clamp(23px,4vw,35px);
+  font-weight:900;
+}
+
+.subtitle{
+  margin-top:4px;
+  color:#96a4b7;
+  font-size:13px;
+}
+
+.top-buttons{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+}
+
+.btn{
+  background:#232d3a;
+  border:1px solid #3c485a;
+  color:#fff;
+  border-radius:10px;
+  padding:10px 14px;
+  font-weight:800;
+}
+
+.btn:hover{
+  filter:brightness(1.08);
+}
+
+.btn.primary{
+  background:linear-gradient(135deg,#1483bb,#315fd8);
+  border-color:#63d0ff;
+}
+
+.btn.red{
+  background:#602b38;
+  border-color:#925062;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 370px;
+  gap:12px;
+  align-items:start;
+}
+
+.left{
+  min-width:0;
+}
+
+.right{
+  min-width:0;
+}
+
+.card{
+  background:#161d27;
+  border:1px solid #303c4d;
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:12px;
+}
+
+.status-line{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.status-title{
+  font-weight:900;
+  font-size:18px;
+}
+
+.badge{
+  padding:7px 11px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:11px;
+  white-space:nowrap;
+}
+
+.badge.white{
+  background:#fff;
+  color:#111;
+}
+
+.badge.black{
+  background:#111;
+  color:#fff;
+  border:1px solid #4d4d4d;
+}
+
+.badge.green{
+  background:#168a66;
+}
+
+.badge.purple{
+  background:#8152f4;
+}
+
+.status-sub{
+  margin-top:7px;
+  color:#aab6c5;
+  line-height:1.55;
+  font-size:12px;
+}
+
+.board-area{
+  display:flex;
+  justify-content:center;
+  width:100%;
+}
+
+.board-frame{
+  width:min(94vw,760px);
+  aspect-ratio:1;
+  background:#3a2a1d;
+  padding:7px;
+  border-radius:12px;
+  box-shadow:0 18px 50px rgba(0,0,0,.35);
+}
+
+#board{
+  width:100%;
+  height:100%;
+  display:grid;
+  overflow:hidden;
+  border-radius:5px;
+  background:#000;
+}
+
+.square{
+  appearance:none;
+  -webkit-appearance:none;
+  border:0;
+  padding:0;
+  margin:0;
+  min-width:0;
+  min-height:0;
+  position:relative;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+  user-select:none;
+}
+
+.square.light{
+  background:#eadfca;
+}
+
+.square.dark{
+  background:#6f8e5a;
+}
+
+.square.allowed{
+  box-shadow:inset 0 0 0 3px rgba(52,205,255,.28);
+}
+
+.square.selected{
+  box-shadow:inset 0 0 0 5px #ffd844 !important;
+  z-index:5;
+}
+
+.square.move-dot::after{
+  content:"";
+  width:25%;
+  height:25%;
+  position:absolute;
+  border-radius:50%;
+  background:rgba(25,25,25,.35);
+}
+
+.square.capture::after{
+  content:"";
+  width:74%;
+  height:74%;
+  position:absolute;
+  border-radius:50%;
+  border:4px solid rgba(255,72,91,.82);
+}
+
+.square.check{
+  box-shadow:inset 0 0 0 5px #ff5166;
+}
+
+.piece{
+  position:relative;
+  z-index:10;
+  pointer-events:none;
+  font-family:"Segoe UI Symbol","DejaVu Sans",serif;
+  line-height:1;
+  font-size:clamp(21px,6vw,58px);
+}
+
+.piece.white{
+  color:white;
+  text-shadow:
+    -1px -1px 0 #222,
+    1px -1px 0 #222,
+    -1px 1px 0 #222,
+    1px 1px 0 #222,
+    0 3px 4px rgba(0,0,0,.5);
+}
+
+.piece.black{
+  color:#111;
+  text-shadow:0 2px 3px rgba(255,255,255,.2);
+}
+
+.coord{
+  position:absolute;
+  z-index:20;
+  font-size:8px;
+  font-weight:800;
+  opacity:.63;
+  pointer-events:none;
+}
+
+.coord.file{
+  left:3px;
+  bottom:2px;
+}
+
+.coord.rank{
+  right:3px;
+  top:2px;
+}
+
+.light .coord{
+  color:#3d4e37;
+}
+
+.dark .coord{
+  color:#edf8e7;
+}
+
+.section-title{
+  font-size:15px;
+  font-weight:900;
+  margin-bottom:9px;
+}
+
+label{
+  display:block;
+  color:#9eabbc;
+  font-size:11px;
+  font-weight:800;
+  margin-bottom:5px;
+}
+
+select,
+input{
+  width:100%;
+  background:#10161d;
+  color:#fff;
+  border:1px solid #3b4758;
+  border-radius:9px;
+  padding:9px;
+  outline:none;
+}
+
+.row2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.online-box{
+  margin-top:10px;
+  padding:10px;
+  background:#101820;
+  border:1px solid #314151;
+  border-radius:11px;
+}
+
+.online-status{
+  color:#cbd5df;
+  font-size:12px;
+  line-height:1.5;
+}
+
+.room-code{
+  font-size:29px;
+  letter-spacing:6px;
+  font-weight:900;
+  color:#69dcff;
+  text-align:center;
+  margin:10px 0;
+}
+
+.room-input{
+  text-align:center;
+  font-size:21px;
+  letter-spacing:4px;
+  font-weight:900;
+}
+
+.button-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:7px;
+  margin-top:8px;
+}
+
+.palette{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+}
+
+.piece-btn{
+  min-height:65px;
+  background:#10161d;
+  border:1px solid #3b4758;
+  color:#fff;
+  border-radius:10px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+}
+
+.piece-btn.active{
+  border:2px solid #ffd844;
+  background:#202a34;
+}
+
+.piece-btn.disabled{
+  opacity:.3;
+}
+
+.piece-icon{
+  font-size:29px;
+  line-height:1;
+}
+
+.piece-count{
+  margin-top:5px;
+  color:#95a4b6;
+  font-size:10px;
+}
+
+.count-box{
+  margin-top:9px;
+  background:#10161d;
+  border:1px solid #2d3948;
+  border-radius:9px;
+  padding:8px;
+  color:#b8c3d0;
+  font-size:11px;
+  line-height:1.5;
+}
+
+.info{
+  color:#d6dee8;
+  font-size:12px;
+  line-height:1.65;
+}
+
+.moves{
+  max-height:300px;
+  overflow:auto;
+}
+
+.move-row{
+  display:grid;
+  grid-template-columns:34px 1fr 1fr;
+  gap:6px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:7px 2px;
+  font-size:12px;
+}
+
+.move-number{
+  color:#718096;
+}
+
+.wait{
+  color:#ffd76b;
+  font-weight:800;
+}
+
+.ok{
+  color:#70e6aa;
+  font-weight:800;
+}
+
+.error{
+  color:#ff7889;
+  font-weight:800;
+}
+
+.hidden{
+  display:none !important;
+}
+
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  background:rgba(3,5,8,.78);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:15px;
+}
+
+.modal{
+  width:min(94vw,430px);
+  background:#1a222d;
+  border:1px solid #3e4a5c;
+  border-radius:15px;
+  padding:18px;
+}
+
+.modal h2{
+  margin:0 0 8px;
+}
+
+.modal p{
+  margin:0 0 14px;
+  color:#aeb9c8;
+  font-size:13px;
+}
+
+.promo{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+
+.promo button{
+  background:#10161d;
+  border:1px solid #3d4858;
+  color:#fff;
+  border-radius:10px;
+  padding:12px;
+  font-size:31px;
+}
+
+@media(max-width:1000px){
+  .layout{
+    grid-template-columns:1fr;
+  }
+
+  .right{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+
+  .right .card{
+    margin-bottom:0;
+  }
+}
+
+@media(max-width:650px){
+  .app{
+    padding:6px;
+  }
+
+  .right{
+    display:flex;
+    flex-direction:column;
+  }
+
+  .board-frame{
+    width:97vw;
+    padding:5px;
+  }
+
+  .piece{
+    font-size:clamp(18px,7.8vw,35px);
+  }
+
+  .room-code{
+    font-size:24px;
+  }
+
+  .btn{
+    padding:9px 11px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <header class="header">
+
+    <div>
+      <h1 class="title" id="title">10×10 배치 체스</h1>
+      <div class="subtitle">
+        온라인 방코드 · AI 대전 · 모바일 지원
+      </div>
+    </div>
+
+    <div class="top-buttons">
+      <button class="btn primary" id="modeBtn">
+        일반 체스로
+      </button>
+
+      <button class="btn" id="newBtn">
+        새 게임
+      </button>
+    </div>
+
+  </header>
+
+
+  <div class="layout">
+
+    <main class="left">
+
+      <div class="card">
+
+        <div class="status-line">
+
+          <div
+            class="status-title"
+            id="statusTitle"
+          >
+            백 기물 배치
+          </div>
+
+          <div
+            class="badge white"
+            id="statusBadge"
+          >
+            WHITE
+          </div>
+
+        </div>
+
+        <div
+          class="status-sub"
+          id="statusSub"
+        >
+          기물을 선택하고 원하는 칸을 눌러주세요.
+        </div>
+
+      </div>
+
+
+      <div class="board-area">
+
+        <div class="board-frame">
+
+          <div id="board"></div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+
+    <aside class="right">
+
+
+      <!-- 플레이 방식 -->
+
+      <div class="card">
+
+        <div class="section-title">
+          플레이 방식
+        </div>
+
+        <label>
+          대전 방식
+        </label>
+
+        <select id="playMode">
+
+          <option value="online">
+            온라인 1 vs 1 · 방코드
+          </option>
+
+          <option value="ai">
+            AI 대전
+          </option>
+
+        </select>
+
+
+        <div id="aiOptions">
+
+          <div style="height:9px"></div>
+
+          <div class="row2">
+
+            <div>
+
+              <label>
+                AI 진영
+              </label>
+
+              <select id="aiSide">
+
+                <option value="b">
+                  흑
+                </option>
+
+                <option value="w">
+                  백
+                </option>
+
+              </select>
+
+            </div>
+
+
+            <div>
+
+              <label>
+                난이도
+              </label>
+
+              <select id="difficulty">
+
+                <option value="easy">
+                  쉬움
+                </option>
+
+                <option value="normal" selected>
+                  보통
+                </option>
+
+                <option value="hard">
+                  어려움
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- 온라인 -->
+
+      <div
+        class="card"
+        id="onlineCard"
+      >
+
+        <div class="section-title">
+          온라인 방
+        </div>
+
+        <div class="info">
+
+          1 vs 1은 이곳에서 방코드로만 진행됩니다.<br>
+          방장이 게임 종류를 선택한 뒤 방을 만들고,
+          상대방에게 6자리 코드를 알려주세요.
+
+        </div>
+
+
+        <div style="height:10px"></div>
+
+
+        <label>
+          방 게임 종류
+        </label>
+
+        <select id="onlineGameMode">
+
+          <option value="variant">
+            10×10 배치 체스
+          </option>
+
+          <option value="classic">
+            일반 8×8 체스
+          </option>
+
+        </select>
+
+
+        <div style="height:9px"></div>
+
+
+        <button
+          class="btn primary"
+          id="createRoomBtn"
+          style="width:100%"
+        >
+          방 만들기
+        </button>
+
+
+        <div class="online-box">
+
+          <div
+            class="online-status"
+            id="onlineStatus"
+          >
+            온라인 서버 연결 준비 중...
+          </div>
+
+
+          <div
+            class="room-code hidden"
+            id="roomCode"
+          >
+            ------
+          </div>
+
+
+          <button
+            class="btn hidden"
+            id="copyRoomBtn"
+            style="width:100%"
+          >
+            방코드 복사
+          </button>
+
+
+          <div style="height:10px"></div>
+
+
+          <input
+            class="room-input"
+            id="roomInput"
+            maxlength="6"
+            inputmode="numeric"
+            placeholder="6자리 코드"
+          >
+
+
+          <div class="button-grid">
+
+            <button
+              class="btn primary"
+              id="joinRoomBtn"
+            >
+              방 참가
+            </button>
+
+            <button
+              class="btn red"
+              id="leaveRoomBtn"
+            >
+              방 나가기
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- 배치 -->
+
+      <div
+        class="card"
+        id="setupCard"
+      >
+
+        <div
+          class="section-title"
+          id="setupTitle"
+        >
+          백 기물 배치
+        </div>
+
+        <div class="info">
+          기물을 선택하면 배치 가능한 칸이 표시됩니다.
+        </div>
+
+        <div style="height:9px"></div>
+
+        <div
+          class="palette"
+          id="palette"
+        ></div>
+
+        <div
+          class="count-box"
+          id="countBox"
+        ></div>
+
+        <div class="button-grid">
+
+          <button
+            class="btn"
+            id="eraseBtn"
+          >
+            지우개
+          </button>
+
+          <button
+            class="btn primary"
+            id="finishBtn"
+          >
+            배치 완료
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- 게임 제어 -->
+
+      <div class="card">
+
+        <div class="section-title">
+          게임 제어
+        </div>
+
+        <div class="button-grid">
+
+          <button
+            class="btn"
+            id="flipBtn"
+          >
+            판 뒤집기
+          </button>
+
+          <button
+            class="btn"
+            id="resetBtn"
+          >
+            다시 시작
+          </button>
+
+        </div>
+
+      </div>
+
+
+      <!-- 규칙 -->
+
+      <div class="card">
+
+        <div class="section-title">
+          규칙
+        </div>
+
+        <div class="info">
+
+          <strong>10×10 배치 체스</strong><br>
+          백과 흑은 자기 진영 앞 5랭크 안에 직접 배치합니다.<br>
+          폰은 5랭크까지 배치 가능합니다.<br>
+          킹/퀸/룩/비숍/나이트는 4랭크까지만 가능합니다.<br>
+          K1 / Q1 / R2 / B2 / N2 / P8.<br>
+          양쪽 킹이 처음부터 체크 상태인 배치는 시작할 수 없습니다.<br>
+          첫 수에는 체크가 나오지 않도록 제한합니다.<br><br>
+
+          <strong>일반 체스</strong><br>
+          표준 8×8 배치로 시작합니다.<br>
+          캐슬링과 앙파상, 프로모션을 지원합니다.<br><br>
+
+          <strong>온라인</strong><br>
+          반드시 6자리 방코드를 사용해서 참가합니다.
+
+        </div>
+
+      </div>
+
+
+      <!-- 이동 기록 -->
+
+      <div class="card">
+
+        <div class="section-title">
+          이동 기록
+        </div>
+
+        <div
+          class="moves"
+          id="moves"
+        ></div>
+
+      </div>
+
+    </aside>
+
+  </div>
+
+</div>
+
+
+<!-- 프로모션 -->
+
+<div
+  class="overlay hidden"
+  id="promotionOverlay"
+>
+
+  <div class="modal">
+
+    <h2>
+      프로모션
+    </h2>
+
+    <p>
+      승급할 기물을 선택하세요.
+    </p>
+
+    <div
+      class="promo"
+      id="promotionButtons"
+    ></div>
+
+  </div>
+
+</div>
+
+
+<!-- Firebase CDN -->
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-database-compat.js"></script>
+
+
+<script>
+"use strict";
+
+/* =========================================================
+   Firebase 설정
+   본인의 Firebase 웹앱 설정으로 변경
+========================================================= */
+
+const firebaseConfig = {
+
+  apiKey:
+    "여기에_API_KEY",
+
+  authDomain:
+    "여기에_AUTH_DOMAIN",
+
+  databaseURL:
+    "여기에_DATABASE_URL",
+
+  projectId:
+    "여기에_PROJECT_ID",
+
+  storageBucket:
+    "여기에_STORAGE_BUCKET",
+
+  messagingSenderId:
+    "여기에_MESSAGING_SENDER_ID",
+
+  appId:
+    "여기에_APP_ID"
+
+};
+
+
+/* =========================================================
+   Firebase 상태
+========================================================= */
+
+let firebaseReady=false;
+let auth=null;
+let db=null;
+let currentUser=null;
+let roomListener=null;
+
+const online={
+  code:null,
+  role:null,
+  hostUid:null,
+  guestUid:null,
+  waiting:false
+};
+
+
+/* =========================================================
+   체스 설정
+========================================================= */
+
+const SYMBOLS={
+  w:{
+    K:"♔",
+    Q:"♕",
+    R:"♖",
+    B:"♗",
+    N:"♘",
+    P:"♙"
+  },
+  b:{
+    K:"♚",
+    Q:"♛",
+    R:"♜",
+    B:"♝",
+    N:"♞",
+    P:"♟"
+  }
+};
+
+const LIMITS={
+  K:1,
+  Q:1,
+  R:2,
+  B:2,
+  N:2,
+  P:8
+};
+
+const VALUES={
+  P:100,
+  N:320,
+  B:330,
+  R:500,
+  Q:900,
+  K:20000
+};
+
+const TYPES=[
+  "K",
+  "Q",
+  "R",
+  "B",
+  "N",
+  "P"
+];
+
+
+/* =========================================================
+   게임 상태
+========================================================= */
+
+let game={
+
+  mode:"variant",
+
+  size:10,
+
+  board:[],
+
+  phase:"setup",
+
+  setupSide:"w",
+
+  setupDone:{
+    w:false,
+    b:false
+  },
+
+  turn:"w",
+
+  selected:null,
+
+  selectedType:"P",
+
+  erase:false,
+
+  firstMove:true,
+
+  firstCheckBlock:true,
+
+  history:[],
+
+  ep:-1,
+
+  castling:"KQkq",
+
+  flipped:false,
+
+  aiBusy:false,
+
+  revision:0
+
+};
+
+let playMode="online";
+let aiSide="b";
+let difficulty="normal";
+
+let promotionMoves=[];
+
+
+/* =========================================================
+   DOM
+========================================================= */
+
+const boardEl=
+  document.getElementById("board");
+
+const paletteEl=
+  document.getElementById("palette");
+
+const setupCard=
+  document.getElementById("setupCard");
+
+const promotionOverlay=
+  document.getElementById("promotionOverlay");
+
+const promotionButtons=
+  document.getElementById("promotionButtons");
+
+
+/* =========================================================
+   Firebase 설정이 실제 값인지 검사
+========================================================= */
+
+function firebaseConfigValid(){
+
+  const badValues=[
+
+    "여기에_API_KEY",
+    "여기에_AUTH_DOMAIN",
+    "여기에_DATABASE_URL",
+    "여기에_PROJECT_ID",
+    "여기에_STORAGE_BUCKET",
+    "여기에_MESSAGING_SENDER_ID",
+    "여기에_APP_ID"
+
+  ];
+
+  return !Object.values(firebaseConfig)
+    .some(value=>badValues.includes(value));
+}
+
+
+/* =========================================================
+   Firebase 시작
+========================================================= */
+
+async function ensureFirebase(){
+
+  if(firebaseReady){
+    return true;
+  }
+
+
+  const status=
+    document.getElementById(
+      "onlineStatus"
+    );
+
+
+  if(!firebaseConfigValid()){
+
+    status.innerHTML=
+      '<span class="error">Firebase 설정이 아직 없습니다.</span><br>'+
+      'firebaseConfig에 본인의 Firebase 웹앱 설정을 넣어주세요.';
+
+    return false;
+  }
+
+
+  try{
+
+    const app=
+      firebase.initializeApp(
+        firebaseConfig
+      );
+
+
+    auth=
+      firebase.auth();
+
+    db=
+      firebase.database();
+
+
+    await auth.signInAnonymously();
+
+    currentUser=
+      auth.currentUser;
+
+
+    firebaseReady=true;
+
+
+    status.innerHTML=
+      '<span class="ok">온라인 서버 연결 완료</span>';
+
+    return true;
+
+  }catch(error){
+
+    console.error(error);
+
+    status.innerHTML=
+      '<span class="error">Firebase 연결 실패</span><br>'+
+      escapeHTML(error.message);
+
+    return false;
+  }
+}
+
+
+/* =========================================================
+   HTML escape
+========================================================= */
+
+function escapeHTML(text){
+
+  return String(text)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+
+/* =========================================================
+   유틸
+========================================================= */
+
+function other(color){
+  return color==="w" ? "b":"w";
+}
+
+function makePiece(color,type){
+  return {
+    color,
+    type
+  };
+}
+
+function cloneBoard(board){
+
+  return board.map(
+    p =>
+      p
+        ? {
+            color:p.color,
+            type:p.type
+          }
+        : null
+  );
+}
+
+function cloneGame(g){
+
+  return {
+    ...g,
+
+    board:
+      cloneBoard(g.board),
+
+    setupDone:{
+      ...g.setupDone
+    },
+
+    history:
+      g.history.map(
+        x=>({...x})
+      )
+  };
+}
+
+function rc(i){
+
+  return {
+    r:
+      Math.floor(i/game.size),
+
+    c:
+      i%game.size
+  };
+}
+
+function idx(r,c){
+  return r*game.size+c;
+}
+
+function inside(r,c){
+
+  return (
+    r>=0 &&
+    r<game.size &&
+    c>=0 &&
+    c<game.size
+  );
+}
+
+function notation(i){
+
+  const {r,c}=rc(i);
+
+  return (
+    "ABCDEFGHIJ"[c] +
+    (game.size-r)
+  );
+}
+
+function countPiece(color,type){
+
+  let n=0;
+
+  for(const p of game.board){
+
+    if(
+      p &&
+      p.color===color &&
+      p.type===type
+    ){
+      n++;
+    }
+  }
+
+  return n;
+}
+
+function countAll(color){
+
+  const result={
+    K:0,
+    Q:0,
+    R:0,
+    B:0,
+    N:0,
+    P:0
+  };
+
+  for(const p of game.board){
+
+    if(
+      p &&
+      p.color===color
+    ){
+
+      result[p.type]++;
+    }
+  }
+
+  return result;
+}
+
+
+/* =========================================================
+   초기 체스
+========================================================= */
+
+function classicBoard(){
+
+  const board=
+    Array(64).fill(null);
+
+  const back=[
+    "R",
+    "N",
+    "B",
+    "Q",
+    "K",
+    "B",
+    "N",
+    "R"
+  ];
+
+
+  for(let c=0;c<8;c++){
+
+    board[c]=
+      makePiece("b",back[c]);
+
+    board[8+c]=
+      makePiece("b","P");
+
+    board[48+c]=
+      makePiece("w","P");
+
+    board[56+c]=
+      makePiece("w",back[c]);
+  }
+
+
+  return board;
+}
+
+
+/* =========================================================
+   새 게임
+========================================================= */
+
+function newLocalGame(){
+
+  game.selected=null;
+  game.erase=false;
+  game.history=[];
+  game.firstMove=true;
+  game.ep=-1;
+  game.castling="KQkq";
+  game.aiBusy=false;
+  game.revision=0;
+
+
+  game.setupDone={
+    w:false,
+    b:false
+  };
+
+
+  game.setupSide="w";
+  game.turn="w";
+
+
+  if(game.mode==="variant"){
+
+    game.size=10;
+
+    game.board=
+      Array(100).fill(null);
+
+    game.phase="setup";
+
+    game.selectedType="P";
+
+  }else{
+
+    game.size=8;
+
+    game.board=
+      classicBoard();
+
+    game.phase="play";
+
+  }
+
+
+  render();
+
+
+  if(
+    playMode==="ai" &&
+    game.mode==="variant" &&
+    aiSide==="w"
+  ){
+
+    setTimeout(
+      aiSetup,
+      250
+    );
+  }
+
+
+  if(
+    playMode==="ai" &&
+    game.mode==="classic" &&
+    aiSide==="w"
+  ){
+
+    setTimeout(
+      aiTurn,
+      300
+    );
+  }
+}
+
+
+/* =========================================================
+   배치 가능 여부
+========================================================= */
+
+function canSetup(color,row,type){
+
+  if(color==="w"){
+
+    if(type==="P"){
+      return row>=5 && row<=9;
+    }
+
+    return row>=6 && row<=9;
+
+  }else{
+
+    if(type==="P"){
+      return row>=0 && row<=4;
+    }
+
+    return row>=0 && row<=3;
+  }
+}
+
+
+/* =========================================================
+   체크 판정
+========================================================= */
+
+function findKing(state,color){
+
+  for(
+    let i=0;
+    i<state.board.length;
+    i++
+  ){
+
+    const p=
+      state.board[i];
+
+    if(
+      p &&
+      p.color===color &&
+      p.type==="K"
+    ){
+
+      return i;
+    }
+  }
+
+  return -1;
+}
+
+function squareAttacked(state,target,attacker){
+
+  const n=
+    state.size;
+
+  const r=
+    Math.floor(target/n);
+
+  const c=
+    target%n;
+
+
+  /* 폰 */
+
+  const dir=
+    attacker==="w"
+      ? -1
+      : 1;
+
+
+  for(const dc of [-1,1]){
+
+    const rr=
+      r-dir;
+
+    const cc=
+      c-dc;
+
+
+    if(
+      rr<0 ||
+      rr>=n ||
+      cc<0 ||
+      cc>=n
+    ){
+      continue;
+    }
+
+
+    const p=
+      state.board[
+        rr*n+cc
+      ];
+
+
+    if(
+      p &&
+      p.color===attacker &&
+      p.type==="P"
+    ){
+
+      return true;
+    }
+  }
+
+
+  /* 나이트 */
+
+  const knight=[
+    [-2,-1],
+    [-2,1],
+    [-1,-2],
+    [-1,2],
+    [1,-2],
+    [1,2],
+    [2,-1],
+    [2,1]
+  ];
+
+
+  for(const [dr,dc] of knight){
+
+    const rr=r+dr;
+    const cc=c+dc;
+
+
+    if(
+      rr<0 ||
+      rr>=n ||
+      cc<0 ||
+      cc>=n
+    ){
+
+      continue;
+    }
+
+
+    const p=
+      state.board[
+        rr*n+cc
+      ];
+
+
+    if(
+      p &&
+      p.color===attacker &&
+      p.type==="N"
+    ){
+
+      return true;
+    }
+  }
+
+
+  /* 킹 */
+
+  for(let dr=-1;dr<=1;dr++){
+
+    for(let dc=-1;dc<=1;dc++){
+
+      if(
+        dr===0 &&
+        dc===0
+      ){
+        continue;
+      }
+
+
+      const rr=r+dr;
+      const cc=c+dc;
+
+
+      if(
+        rr<0 ||
+        rr>=n ||
+        cc<0 ||
+        cc>=n
+      ){
+
+        continue;
+      }
+
+
+      const p=
+        state.board[
+          rr*n+cc
+        ];
+
+
+      if(
+        p &&
+        p.color===attacker &&
+        p.type==="K"
+      ){
+
+        return true;
+      }
+    }
+  }
+
+
+  /* 룩 / 퀸 */
+
+  const straight=[
+    [-1,0],
+    [1,0],
+    [0,-1],
+    [0,1]
+  ];
+
+
+  for(const [dr,dc] of straight){
+
+    let rr=r+dr;
+    let cc=c+dc;
+
+
+    while(
+      rr>=0 &&
+      rr<n &&
+      cc>=0 &&
+      cc<n
+    ){
+
+      const p=
+        state.board[
+          rr*n+cc
+        ];
+
+
+      if(p){
+
+        if(
+          p.color===attacker &&
+          (
+            p.type==="R" ||
+            p.type==="Q"
+          )
+        ){
+
+          return true;
+        }
+
+        break;
+      }
+
+
+      rr+=dr;
+      cc+=dc;
+    }
+  }
+
+
+  /* 비숍 / 퀸 */
+
+  const diagonal=[
+    [-1,-1],
+    [-1,1],
+    [1,-1],
+    [1,1]
+  ];
+
+
+  for(const [dr,dc] of diagonal){
+
+    let rr=r+dr;
+    let cc=c+dc;
+
+
+    while(
+      rr>=0 &&
+      rr<n &&
+      cc>=0 &&
+      cc<n
+    ){
+
+      const p=
+        state.board[
+          rr*n+cc
+        ];
+
+
+      if(p){
+
+        if(
+          p.color===attacker &&
+          (
+            p.type==="B" ||
+            p.type==="Q"
+          )
+        ){
+
+          return true;
+        }
+
+        break;
+      }
+
+
+      rr+=dr;
+      cc+=dc;
+    }
+  }
+
+
+  return false;
+}
+
+
+function isCheck(state,color){
+
+  const king=
+    findKing(
+      state,
+      color
+    );
+
+
+  if(
+    king<0
+  ){
+
+    return false;
+  }
+
+
+  return squareAttacked(
+    state,
+    king,
+    other(color)
+  );
+}
+
+
+/* =========================================================
+   이동 생성
+========================================================= */
+
+function slideMoves(state,moves,from,dirs){
+
+  const p=
+    state.board[from];
+
+
+  const n=
+    state.size;
+
+  const r=
+    Math.floor(from/n);
+
+  const c=
+    from%n;
+
+
+  for(
+    const [dr,dc]
+    of dirs
+  ){
+
+    let rr=r+dr;
+    let cc=c+dc;
+
+
+    while(
+      rr>=0 &&
+      rr<n &&
+      cc>=0 &&
+      cc<n
+    ){
+
+      const to=
+        rr*n+cc;
+
+      const target=
+        state.board[to];
+
+
+      if(!target){
+
+        moves.push({
+          from,
+          to
+        });
+
+      }else{
+
+        if(
+          target.color!==p.color
+        ){
+
+          moves.push({
+            from,
+            to,
+            capture:true
+          });
+        }
+
+        break;
+      }
+
+
+      rr+=dr;
+      cc+=dc;
+    }
+  }
+}
+
+
+function pseudoMoves(state,color){
+
+  const moves=[];
+  const n=state.size;
+
+
+  for(
+    let from=0;
+    from<state.board.length;
+    from++
+  ){
+
+    const p=
+      state.board[from];
+
+
+    if(
+      !p ||
+      p.color!==color
+    ){
+      continue;
+    }
+
+
+    const r=
+      Math.floor(from/n);
+
+    const c=
+      from%n;
+
+
+    /* 폰 */
+
+    if(p.type==="P"){
+
+      const dir=
+        color==="w"
+          ? -1
+          : 1;
+
+
+      const rr=
+        r+dir;
+
+
+      if(
+        rr>=0 &&
+        rr<n
+      ){
+
+        const to=
+          rr*n+c;
+
+
+        if(
+          !state.board[to]
+        ){
+
+          const last=
+            color==="w"
+              ? 0
+              : n-1;
+
+
+          if(rr===last){
+
+            for(
+              const promotion
+              of ["Q","R","B","N"]
+            ){
+
+              moves.push({
+                from,
+                to,
+                promotion
+              });
+            }
+
+          }else{
+
+            moves.push({
+              from,
+              to
+            });
+
+          }
+
+
+          if(
+            state.mode==="classic"
+          ){
+
+            const start=
+              color==="w"
+                ? 6
+                : 1;
+
+            const rr2=
+              r+dir*2;
+
+
+            if(
+              r===start &&
+              rr2>=0 &&
+              rr2<n
+            ){
+
+              const to2=
+                rr2*n+c;
+
+
+              if(
+                !state.board[to2]
+              ){
+
+                moves.push({
+                  from,
+                  to:to2
+                });
+              }
+            }
+          }
+        }
+      }
+
+
+      for(const dc of [-1,1]){
+
+        const rr2=
+          r+dir;
+
+        const cc2=
+          c+dc;
+
+
+        if(
+          rr2<0 ||
+          rr2>=n ||
+          cc2<0 ||
+          cc2>=n
+        ){
+
+          continue;
+        }
+
+
+        const to=
+          rr2*n+cc2;
+
+        const target=
+          state.board[to];
+
+
+        if(
+          target &&
+          target.color!==color
+        ){
+
+          const last=
+            color==="w"
+              ? 0
+              : n-1;
+
+
+          if(rr2===last){
+
+            for(
+              const promotion
+              of ["Q","R","B","N"]
+            ){
+
+              moves.push({
+                from,
+                to,
+                capture:true,
+                promotion
+              });
+            }
+
+          }else{
+
+            moves.push({
+              from,
+              to,
+              capture:true
+            });
+          }
+        }
+
+
+        if(
+          state.mode==="classic" &&
+          to===state.ep &&
+          !target
+        ){
+
+          moves.push({
+            from,
+            to,
+            capture:true,
+            enPassant:true
+          });
+        }
+      }
+
+
+      continue;
+    }
+
+
+    /* 나이트 */
+
+    if(p.type==="N"){
+
+      const ns=[
+        [-2,-1],
+        [-2,1],
+        [-1,-2],
+        [-1,2],
+        [1,-2],
+        [1,2],
+        [2,-1],
+        [2,1]
+      ];
+
+
+      for(
+        const [dr,dc]
+        of ns
+      ){
+
+        const rr=r+dr;
+        const cc=c+dc;
+
+
+        if(
+          rr<0 ||
+          rr>=n ||
+          cc<0 ||
+          cc>=n
+        ){
+
+          continue;
+        }
+
+
+        const to=
+          rr*n+cc;
+
+        const target=
+          state.board[to];
+
+
+        if(
+          !target ||
+          target.color!==color
+        ){
+
+          moves.push({
+            from,
+            to,
+            capture:!!target
+          });
+        }
+      }
+
+
+      continue;
+    }
+
+
+    /* 비숍 */
+
+    if(p.type==="B"){
+
+      slideMoves(
+        state,
+        moves,
+        from,
+        [
+          [-1,-1],
+          [-1,1],
+          [1,-1],
+          [1,1]
+        ]
+      );
+
+      continue;
+    }
+
+
+    /* 룩 */
+
+    if(p.type==="R"){
+
+      slideMoves(
+        state,
+        moves,
+        from,
+        [
+          [-1,0],
+          [1,0],
+          [0,-1],
+          [0,1]
+        ]
+      );
+
+      continue;
+    }
+
+
+    /* 퀸 */
+
+    if(p.type==="Q"){
+
+      slideMoves(
+        state,
+        moves,
+        from,
+        [
+          [-1,-1],
+          [-1,1],
+          [1,-1],
+          [1,1],
+          [-1,0],
+          [1,0],
+          [0,-1],
+          [0,1]
+        ]
+      );
+
+      continue;
+    }
+
+
+    /* 킹 */
+
+    if(p.type==="K"){
+
+      for(let dr=-1;dr<=1;dr++){
+
+        for(let dc=-1;dc<=1;dc++){
+
+          if(
+            dr===0 &&
+            dc===0
+          ){
+
+            continue;
+          }
+
+
+          const rr=r+dr;
+          const cc=c+dc;
+
+
+          if(
+            rr<0 ||
+            rr>=n ||
+            cc<0 ||
+            cc>=n
+          ){
+
+            continue;
+          }
+
+
+          const to=
+            rr*n+cc;
+
+          const target=
+            state.board[to];
+
+
+          if(
+            !target ||
+            target.color!==color
+          ){
+
+            moves.push({
+              from,
+              to,
+              capture:!!target
+            });
+          }
+        }
+      }
+
+
+      /* 캐슬링 */
+
+      if(
+        state.mode==="classic"
+      ){
+
+        if(
+          color==="w" &&
+          from===60
+        ){
+
+          if(
+            state.castling.includes("K") &&
+            !state.board[61] &&
+            !state.board[62] &&
+            state.board[63] &&
+            state.board[63].type==="R" &&
+            state.board[63].color==="w" &&
+            !squareAttacked(state,60,"b") &&
+            !squareAttacked(state,61,"b") &&
+            !squareAttacked(state,62,"b")
+          ){
+
+            moves.push({
+              from,
+              to:62,
+              castle:"K"
+            });
+          }
+
+
+          if(
+            state.castling.includes("Q") &&
+            !state.board[59] &&
+            !state.board[58] &&
+            !state.board[57] &&
+            state.board[56] &&
+            state.board[56].type==="R" &&
+            state.board[56].color==="w" &&
+            !squareAttacked(state,60,"b") &&
+            !squareAttacked(state,59,"b") &&
+            !squareAttacked(state,58,"b")
+          ){
+
+            moves.push({
+              from,
+              to:58,
+              castle:"Q"
+            });
+          }
+        }
+
+
+        if(
+          color==="b" &&
+          from===4
+        ){
+
+          if(
+            state.castling.includes("k") &&
+            !state.board[5] &&
+            !state.board[6] &&
+            state.board[7] &&
+            state.board[7].type==="R" &&
+            state.board[7].color==="b" &&
+            !squareAttacked(state,4,"w") &&
+            !squareAttacked(state,5,"w") &&
+            !squareAttacked(state,6,"w")
+          ){
+
+            moves.push({
+              from,
+              to:6,
+              castle:"k"
+            });
+          }
+
+
+          if(
+            state.castling.includes("q") &&
+            !state.board[3] &&
+            !state.board[2] &&
+            !state.board[1] &&
+            state.board[0] &&
+            state.board[0].type==="R" &&
+            state.board[0].color==="b" &&
+            !squareAttacked(state,4,"w") &&
+            !squareAttacked(state,3,"w") &&
+            !squareAttacked(state,2,"w")
+          ){
+
+            moves.push({
+              from,
+              to:2,
+              castle:"q"
+            });
+          }
+        }
+      }
+    }
+  }
+
+
+  return moves;
+}
+
+
+/* =========================================================
+   이동 적용
+========================================================= */
+
+function applyMove(state,move){
+
+  const next=
+    cloneGame(state);
+
+
+  const moving=
+    next.board[move.from];
+
+  const captured=
+    next.board[move.to] || null;
+
+
+  next.board[move.from]=null;
+
+
+  if(move.enPassant){
+
+    const r=
+      Math.floor(
+        move.to/next.size
+      );
+
+    const c=
+      move.to%next.size;
+
+    const capR=
+      r+
+      (
+        moving.color==="w"
+          ? 1
+          : -1
+      );
+
+
+    next.board[
+      capR*next.size+c
+    ]=null;
+  }
+
+
+  let placed={
+    color:moving.color,
+    type:moving.type
+  };
+
+
+  if(move.promotion){
+
+    placed.type=
+      move.promotion;
+  }
+
+
+  next.board[move.to]=
+    placed;
+
+
+  /* 캐슬링 */
+
+  if(move.castle==="K"){
+
+    next.board[63]=null;
+
+    next.board[61]=
+      makePiece("w","R");
+  }
+
+
+  if(move.castle==="Q"){
+
+    next.board[56]=null;
+
+    next.board[59]=
+      makePiece("w","R");
+  }
+
+
+  if(move.castle==="k"){
+
+    next.board[7]=null;
+
+    next.board[5]=
+      makePiece("b","R");
+  }
+
+
+  if(move.castle==="q"){
+
+    next.board[0]=null;
+
+    next.board[3]=
+      makePiece("b","R");
+  }
+
+
+  /* 캐슬 권한 */
+
+  if(moving.type==="K"){
+
+    if(
+      moving.color==="w"
+    ){
+
+      next.castling=
+        next.castling
+          .replace("K","")
+          .replace("Q","");
+
+    }else{
+
+      next.castling=
+        next.castling
+          .replace("k","")
+          .replace("q","");
+    }
+  }
+
+
+  if(moving.type==="R"){
+
+    if(move.from===63)
+      next.castling=
+        next.castling.replace("K","");
+
+    if(move.from===56)
+      next.castling=
+        next.castling.replace("Q","");
+
+    if(move.from===7)
+      next.castling=
+        next.castling.replace("k","");
+
+    if(move.from===0)
+      next.castling=
+        next.castling.replace("q","");
+  }
+
+
+  if(
+    captured &&
+    captured.type==="R"
+  ){
+
+    if(move.to===63)
+      next.castling=
+        next.castling.replace("K","");
+
+    if(move.to===56)
+      next.castling=
+        next.castling.replace("Q","");
+
+    if(move.to===7)
+      next.castling=
+        next.castling.replace("k","");
+
+    if(move.to===0)
+      next.castling=
+        next.castling.replace("q","");
+  }
+
+
+  /* 앙파상 */
+
+  next.ep=-1;
+
+
+  if(
+    moving.type==="P" &&
+    Math.abs(
+      move.to-move.from
+    )===next.size*2
+  ){
+
+    const fromRow=
+      Math.floor(
+        move.from/next.size
+      );
+
+
+    const toRow=
+      Math.floor(
+        move.to/next.size
+      );
+
+
+    const mid=
+      (fromRow+toRow)/2;
+
+
+    next.ep=
+      mid*next.size+
+      (move.from%next.size);
+  }
+
+
+  next.turn=
+    other(moving.color);
+
+
+  return next;
+}
+
+
+/* =========================================================
+   합법 수
+========================================================= */
+
+function getLegalMoves(state,color){
+
+  let moves=
+    pseudoMoves(
+      state,
+      color
+    );
+
+
+  moves=
+    moves.filter(
+      move=>{
+
+        const next=
+          applyMove(
+            state,
+            move
+          );
+
+
+        return !isCheck(
+          next,
+          color
+        );
+      }
+    );
+
+
+  /*
+    첫 수 체크 제한
+  */
+
+  if(
+    state.mode==="variant" &&
+    state.firstCheckBlock &&
+    state.firstMove
+  ){
+
+    const safe=
+      moves.filter(
+        move=>{
+
+          const next=
+            applyMove(
+              state,
+              move
+            );
+
+
+          return !isCheck(
+            next,
+            other(color)
+          );
+        }
+      );
+
+
+    if(safe.length){
+      moves=safe;
+    }
+  }
+
+
+  return moves;
+}
+
+
+/* =========================================================
+   기물 배치
+========================================================= */
+
+async function putSetupPiece(i){
+
+  if(
+    game.phase!=="setup"
+  ){
+    return;
+  }
+
+
+  const color=
+    game.setupSide;
+
+
+  /*
+    온라인에서는 자기 색만
+  */
+
+  if(
+    playMode==="online"
+  ){
+
+    if(
+      !online.role ||
+      online.role!==color
+    ){
+
+      return;
+    }
+  }
+
+
+  const {r}=
+    rc(i);
+
+
+  /*
+    지우개
+  */
+
+  if(game.erase){
+
+    if(
+      game.board[i] &&
+      game.board[i].color===color
+    ){
+
+      const next=
+        cloneGame(game);
+
+      next.board[i]=null;
+
+      await saveOnlineOrLocal(next);
+    }
+
+    return;
+  }
+
+
+  const type=
+    game.selectedType;
+
+
+  if(
+    !canSetup(
+      color,
+      r,
+      type
+    )
+  ){
+
+    return;
+  }
+
+
+  /*
+    상대 기물 보호
+  */
+
+  if(
+    game.board[i] &&
+    game.board[i].color!==color
+  ){
+
+    return;
+  }
+
+
+  /*
+    최대 개수
+  */
+
+  if(
+    countPiece(
+      color,
+      type
+    )>=LIMITS[type]
+  ){
+
+    return;
+  }
+
+
+  const next=
+    cloneGame(game);
+
+
+  next.board[i]=
+    makePiece(
+      color,
+      type
+    );
+
+
+  await saveOnlineOrLocal(
+    next
+  );
+}
+
+
+/* =========================================================
+   배치 완료
+========================================================= */
+
+async function finishSetup(){
+
+  if(
+    game.phase!=="setup"
+  ){
+    return;
+  }
+
+
+  const color=
+    game.setupSide;
+
+
+  if(
+    playMode==="online" &&
+    online.role!==color
+  ){
+
+    return;
+  }
+
+
+  const counts=
+    countAll(color);
+
+
+  for(const type of TYPES){
+
+    if(
+      counts[type]!==LIMITS[type]
+    ){
+
+      alert(
+        `${type} 기물은 ${LIMITS[type]}개가 필요합니다.`
+      );
+
+      return;
+    }
+  }
+
+
+  /*
+    배치 영역 검사
+  */
+
+  for(
+    let i=0;
+    i<game.board.length;
+    i++
+  ){
+
+    const p=
+      game.board[i];
+
+
+    if(
+      !p ||
+      p.color!==color
+    ){
+      continue;
+    }
+
+
+    const {r}=
+      rc(i);
+
+
+    if(
+      !canSetup(
+        color,
+        r,
+        p.type
+      )
+    ){
+
+      alert(
+        "배치할 수 없는 위치에 기물이 있습니다."
+      );
+
+      return;
+    }
+  }
+
+
+  const next=
+    cloneGame(game);
+
+
+  next.setupDone[color]=true;
+
+
+  if(color==="w"){
+
+    next.setupSide="b";
+
+  }else{
+
+    if(
+      !validStartingPosition(
+        next
+      )
+    ){
+
+      alert(
+        "양쪽 킹이 처음부터 체크 상태인 배치는 시작할 수 없습니다."
+      );
+
+      return;
+    }
+
+
+    next.phase="play";
+    next.turn="w";
+    next.firstMove=true;
+  }
+
+
+  next.selected=null;
+
+
+  await saveOnlineOrLocal(
+    next
+  );
+}
+
+
+/* =========================================================
+   시작 위치 검사
+========================================================= */
+
+function validStartingPosition(state){
+
+  return (
+    !isCheck(state,"w") &&
+    !isCheck(state,"b")
+  );
+}
+
+
+/* =========================================================
+   실제 이동
+========================================================= */
+
+async function playSquare(i){
+
+  if(
+    game.phase!=="play"
+  ){
+    return;
+  }
+
+
+  /*
+    온라인에서는 자신의 색만 움직임
+  */
+
+  if(
+    playMode==="online"
+  ){
+
+    if(
+      !online.role ||
+      online.role!==game.turn
+    ){
+
+      return;
+    }
+
+  }else if(
+    playMode==="ai" &&
+    game.turn===aiSide
+  ){
+
+    return;
+  }
+
+
+  const p=
+    game.board[i];
+
+
+  if(game.selected===null){
+
+    if(
+      p &&
+      p.color===game.turn
+    ){
+
+      game.selected=i;
+
+      render();
+    }
+
+    return;
+  }
+
+
+  if(
+    game.selected===i
+  ){
+
+    game.selected=null;
+
+    render();
+
+    return;
+  }
+
+
+  if(
+    p &&
+    p.color===game.turn
+  ){
+
+    game.selected=i;
+
+    render();
+
+    return;
+  }
+
+
+  const possible=
+    getLegalMoves(
+      game,
+      game.turn
+    ).filter(
+      m =>
+        m.from===game.selected &&
+        m.to===i
+    );
+
+
+  if(
+    !possible.length
+  ){
+    return;
+  }
+
+
+  /*
+    프로모션
+  */
+
+  if(
+    possible.some(
+      m=>m.promotion
+    )
+  ){
+
+    promotionMoves=
+      possible;
+
+
+    openPromotion(
+      game.board[
+        possible[0].from
+      ].color
+    );
+
+    return;
+  }
+
+
+  await executeMove(
+    possible[0]
+  );
+}
+
+
+/* =========================================================
+   수 실행
+========================================================= */
+
+async function executeMove(move){
+
+  const moving=
+    game.board[
+      move.from
+    ];
+
+
+  let text=
+    notation(
+      move.from
+    );
+
+
+  if(
+    move.castle==="K" ||
+    move.castle==="k"
+  ){
+
+    text="O-O";
+
+  }else if(
+    move.castle==="Q" ||
+    move.castle==="q"
+  ){
+
+    text="O-O-O";
+
+  }else{
+
+    text +=
+      (
+        game.board[move.to] ||
+        move.enPassant
+      )
+      ? "×"
+      : "→";
+
+    text +=
+      notation(move.to);
+
+
+    if(move.promotion){
+
+      text +=
+        "="+
+        move.promotion;
+    }
+  }
+
+
+  const next=
+    applyMove(
+      game,
+      move
+    );
+
+
+  next.history=
+    game.history.concat([
+      {
+        color:moving.color,
+        text
+      }
+    ]);
+
+
+  next.firstMove=false;
+  next.selected=null;
+
+
+  const enemyMoves=
+    getLegalMoves(
+      next,
+      next.turn
+    );
+
+
+  if(
+    enemyMoves.length===0
+  ){
+
+    next.phase="over";
+  }
+
+
+  await saveOnlineOrLocal(
+    next
+  );
+}
+
+
+/* =========================================================
+   로컬 / 온라인 저장 통합
+========================================================= */
+
+async function saveOnlineOrLocal(next){
+
+  if(
+    playMode==="online"
+  ){
+
+    await saveOnlineState(next);
+
+  }else{
+
+    game=next;
+
+    render();
+
+
+    if(
+      playMode==="ai" &&
+      game.phase==="play" &&
+      game.turn===aiSide
+    ){
+
+      setTimeout(
+        aiTurn,
+        250
+      );
+    }
+  }
+}
+
+
+/* =========================================================
+   방에 저장
+========================================================= */
+
+async function saveOnlineState(next){
+
+  if(
+    !online.code ||
+    !currentUser ||
+    !db
+  ){
+
+    return;
+  }
+
+
+  const roomRef=
+    db
+      .ref("rooms")
+      .child(online.code);
+
+
+  try{
+
+    const snap=
+      await roomRef.once(
+        "value"
+      );
+
+
+    if(!snap.exists()){
+
+      alert(
+        "방이 존재하지 않습니다."
+      );
+
+      return;
+    }
+
+
+    const room=
+      snap.val();
+
+
+    if(
+      room.hostUid!==currentUser.uid &&
+      room.guestUid!==currentUser.uid
+    ){
+
+      alert(
+        "이 방에 참가한 사용자가 아닙니다."
+      );
+
+      return;
+    }
+
+
+    next.revision=
+      (room.gameState?.revision || 0)+1;
+
+
+    await roomRef.child(
+      "gameState"
+    ).set(
+      serializeGame(next)
+    );
+
+
+  }catch(error){
+
+    console.error(error);
+
+    alert(
+      "게임 상태 동기화 실패\n"+
+      error.message
+    );
+  }
+}
+
+
+/* =========================================================
+   직렬화
+========================================================= */
+
+function serializeGame(g){
+
+  return {
+
+    mode:g.mode,
+
+    size:g.size,
+
+    board:g.board,
+
+    phase:g.phase,
+
+    setupSide:g.setupSide,
+
+    setupDone:g.setupDone,
+
+    turn:g.turn,
+
+    firstMove:g.firstMove,
+
+    firstCheckBlock:g.firstCheckBlock,
+
+    history:g.history,
+
+    ep:g.ep,
+
+    castling:g.castling,
+
+    revision:g.revision || 0
+  };
+}
+
+
+function loadGame(data){
+
+  game={
+
+    mode:data.mode || "classic",
+
+    size:data.size || 8,
+
+    board:
+      Array.isArray(data.board)
+        ? data.board
+        : [],
+
+    phase:
+      data.phase || "play",
+
+    setupSide:
+      data.setupSide || "w",
+
+    setupDone:
+      data.setupDone || {
+        w:false,
+        b:false
+      },
+
+    turn:
+      data.turn || "w",
+
+    selected:null,
+
+    selectedType:"P",
+
+    erase:false,
+
+    firstMove:
+      data.firstMove ?? true,
+
+    firstCheckBlock:
+      data.firstCheckBlock ?? true,
+
+    history:
+      Array.isArray(data.history)
+        ? data.history
+        : [],
+
+    ep:
+      typeof data.ep==="number"
+        ? data.ep
+        : -1,
+
+    castling:
+      data.castling || "KQkq",
+
+    flipped:
+      game.flipped,
+
+    aiBusy:false,
+
+    revision:
+      data.revision || 0
+  };
+
+
+  render();
+}
+
+
+/* =========================================================
+   방코드 생성
+========================================================= */
+
+function randomCode(){
+
+  return String(
+    Math.floor(
+      100000+
+      Math.random()*900000
+    )
+  );
+}
+
+
+async function makeUniqueCode(){
+
+  for(
+    let i=0;
+    i<20;
+    i++
+  ){
+
+    const code=
+      randomCode();
+
+
+    const snap=
+      await db
+        .ref("rooms")
+        .child(code)
+        .once("value");
+
+
+    if(
+      !snap.exists()
+    ){
+
+      return code;
+    }
+  }
+
+
+  throw new Error(
+    "방코드를 생성하지 못했습니다."
+  );
+}
+
+
+/* =========================================================
+   방 만들기
+========================================================= */
+
+async function createRoom(){
+
+  const ready=
+    await ensureFirebase();
+
+
+  if(!ready){
+    return;
+  }
+
+
+  await leaveRoom(false);
+
+
+  const mode=
+    document.getElementById(
+      "onlineGameMode"
+    ).value;
+
+
+  const code=
+    await makeUniqueCode();
+
+
+  let initialGame;
+
+
+  if(mode==="variant"){
+
+    initialGame={
+
+      mode:"variant",
+
+      size:10,
+
+      board:
+        Array(100).fill(null),
+
+      phase:"setup",
+
+      setupSide:"w",
+
+      setupDone:{
+        w:false,
+        b:false
+      },
+
+      turn:"w",
+
+      firstMove:true,
+
+      firstCheckBlock:true,
+
+      history:[],
+
+      ep:-1,
+
+      castling:"",
+
+      revision:0
+
+    };
+
+  }else{
+
+    initialGame={
+
+      mode:"classic",
+
+      size:8,
+
+      board:
+        classicBoard(),
+
+      phase:"play",
+
+      setupSide:"w",
+
+      setupDone:{
+        w:true,
+        b:true
+      },
+
+      turn:"w",
+
+      firstMove:true,
+
+      firstCheckBlock:false,
+
+      history:[],
+
+      ep:-1,
+
+      castling:"KQkq",
+
+      revision:0
+
+    };
+  }
+
+
+  await db
+    .ref("rooms")
+    .child(code)
+    .set({
+
+      hostUid:
+        currentUser.uid,
+
+      guestUid:null,
+
+      gameMode:
+        mode,
+
+      gameState:
+        initialGame,
+
+      createdAt:
+        Date.now()
+    });
+
+
+  online.code=
+    code;
+
+  online.role=
+    "w";
+
+  online.hostUid=
+    currentUser.uid;
+
+  online.guestUid=
+    null;
+
+  online.waiting=true;
+
+
+  listenRoom(code);
+
+  updateOnlineUI();
+
+  loadGame(initialGame);
+}
+
+
+/* =========================================================
+   방 참가
+========================================================= */
+
+async function joinRoom(){
+
+  const ready=
+    await ensureFirebase();
+
+
+  if(!ready){
+    return;
+  }
+
+
+  const code=
+    document.getElementById(
+      "roomInput"
+    ).value
+      .replace(/\D/g,"")
+      .slice(0,6);
+
+
+  document.getElementById(
+    "roomInput"
+  ).value=code;
+
+
+  if(
+    code.length!==6
+  ){
+
+    alert(
+      "6자리 방코드를 입력하세요."
+    );
+
+    return;
+  }
+
+
+  await leaveRoom(false);
+
+
+  const roomRef=
+    db
+      .ref("rooms")
+      .child(code);
+
+
+  const result=
+    await roomRef.transaction(
+      room=>{
+
+        if(!room){
+          return room;
+        }
+
+
+        if(
+          room.hostUid===currentUser.uid
+        ){
+
+          return room;
+        }
+
+
+        if(
+          room.guestUid &&
+          room.guestUid!==currentUser.uid
+        ){
+
+          return;
+        }
+
+
+        room.guestUid=
+          currentUser.uid;
+
+
+        return room;
+      }
+    );
+
+
+  if(
+    !result.committed
+  ){
+
+    const snap=
+      await roomRef.once(
+        "value"
+      );
+
+
+    if(
+      !snap.exists()
+    ){
+
+      alert(
+        "존재하지 않는 방입니다."
+      );
+
+      return;
+    }
+
+
+    const data=
+      snap.val();
+
+
+    if(
+      data.guestUid &&
+      data.guestUid!==currentUser.uid
+    ){
+
+      alert(
+        "이미 2명이 참가한 방입니다."
+      );
+
+      return;
+    }
+
+
+    alert(
+      "방 참가에 실패했습니다."
+    );
+
+    return;
+  }
+
+
+  const room=
+    result.snapshot.val();
+
+
+  online.code=
+    code;
+
+  online.role=
+    "b";
+
+  online.hostUid=
+    room.hostUid;
+
+  online.guestUid=
+    currentUser.uid;
+
+  online.waiting=false;
+
+
+  listenRoom(code);
+
+  updateOnlineUI();
+
+
+  if(
+    room.gameState
+  ){
+
+    loadGame(
+      room.gameState
+    );
+  }
+}
+
+
+/* =========================================================
+   방 감시
+========================================================= */
+
+function listenRoom(code){
+
+  if(roomListener){
+
+    roomListener();
+    roomListener=null;
+  }
+
+
+  const roomRef=
+    db
+      .ref("rooms")
+      .child(code);
+
+
+  roomListener=
+    roomRef.on(
+      "value",
+      snapshot=>{
+
+        if(
+          !snapshot.exists()
+        ){
+
+          online.code=null;
+          online.role=null;
+          online.hostUid=null;
+          online.guestUid=null;
+          online.waiting=false;
+
+
+          document.getElementById(
+            "onlineStatus"
+          ).innerHTML=
+            '<span class="error">방이 종료되었습니다.</span>';
+
+
+          updateOnlineUI();
+
+          return;
+        }
+
+
+        const room=
+          snapshot.val();
+
+
+        online.hostUid=
+          room.hostUid;
+
+        online.guestUid=
+          room.guestUid || null;
+
+
+        if(
+          currentUser &&
+          room.hostUid===
+          currentUser.uid
+        ){
+
+          online.role="w";
+
+        }else if(
+          currentUser &&
+          room.guestUid===
+          currentUser.uid
+        ){
+
+          online.role="b";
+
+        }else{
+
+          online.role=null;
+        }
+
+
+        online.waiting=
+          !room.guestUid;
+
+
+        if(
+          room.gameState
+        ){
+
+          loadGame(
+            room.gameState
+          );
+        }
+
+
+        updateOnlineUI();
+
+      },
+      error=>{
+
+        console.error(error);
+
+        document.getElementById(
+          "onlineStatus"
+        ).innerHTML=
+          '<span class="error">실시간 연결 오류</span>';
+
+      }
+    );
+}
+
+
+/* =========================================================
+   방 나가기
+========================================================= */
+
+async function leaveRoom(showMessage=true){
+
+  if(
+    !online.code ||
+    !db ||
+    !currentUser
+  ){
+
+    return;
+  }
+
+
+  try{
+
+    const ref=
+      db
+        .ref("rooms")
+        .child(
+          online.code
+        );
+
+
+    const snap=
+      await ref.once("value");
+
+
+    if(
+      snap.exists()
+    ){
+
+      const room=
+        snap.val();
+
+
+      if(
+        room.hostUid===
+        currentUser.uid
+      ){
+
+        await ref.remove();
+
+      }else if(
+        room.guestUid===
+        currentUser.uid
+      ){
+
+        await ref
+          .child("guestUid")
+          .set(null);
+      }
+    }
+
+  }catch(error){
+
+    console.error(error);
+  }
+
+
+  if(roomListener){
+
+    roomListener();
+    roomListener=null;
+  }
+
+
+  online.code=null;
+  online.role=null;
+  online.hostUid=null;
+  online.guestUid=null;
+  online.waiting=false;
+
+
+  if(showMessage){
+
+    document.getElementById(
+      "onlineStatus"
+    ).textContent=
+      "방에서 나왔습니다.";
+  }
+
+
+  updateOnlineUI();
+}
+
+
+/* =========================================================
+   온라인 UI
+========================================================= */
+
+function updateOnlineUI(){
+
+  const status=
+    document.getElementById(
+      "onlineStatus"
+    );
+
+  const roomCode=
+    document.getElementById(
+      "roomCode"
+    );
+
+  const copy=
+    document.getElementById(
+      "copyRoomBtn"
+    );
+
+
+  if(playMode!=="online"){
+
+    return;
+  }
+
+
+  if(!online.code){
+
+    roomCode.classList.add(
+      "hidden"
+    );
+
+    copy.classList.add(
+      "hidden"
+    );
+
+
+    if(firebaseReady){
+
+      status.innerHTML=
+        '<span class="ok">온라인 서버 준비 완료</span><br>'+
+        '방을 만들거나 코드를 입력하세요.';
+
+    }
+
+
+    return;
+  }
+
+
+  roomCode.textContent=
+    online.code;
+
+
+  roomCode.classList.remove(
+    "hidden"
+  );
+
+
+  copy.classList.remove(
+    "hidden"
+  );
+
+
+  if(online.waiting){
+
+    status.innerHTML=
+      '<span class="wait">상대방을 기다리는 중...</span><br>'+
+      '방코드 '+online.code+
+      ' 를 상대에게 알려주세요.';
+
+  }else{
+
+    status.innerHTML=
+      '<span class="ok">상대방 연결 완료</span><br>'+
+      '내 색: '+
+      (
+        online.role==="w"
+          ? "백"
+          : "흑"
+      );
+  }
+}
+
+
+/* =========================================================
+   팔레트
+========================================================= */
+
+function renderPalette(){
+
+  if(
+    game.phase!=="setup"
+  ){
+
+    setupCard.classList.add(
+      "hidden"
+    );
+
+    return;
+  }
+
+
+  setupCard.classList.remove(
+    "hidden"
+  );
+
+
+  const color=
+    game.setupSide;
+
+
+  paletteEl.innerHTML="";
+
+
+  const counts=
+    countAll(color);
+
+
+  for(
+    const type
+    of TYPES
+  ){
+
+    const b=
+      document.createElement(
+        "button"
+      );
+
+
+    b.className=
+      "piece-btn";
+
+
+    if(
+      game.selectedType===type &&
+      !game.erase
+    ){
+
+      b.classList.add(
+        "active"
+      );
+    }
+
+
+    if(
+      counts[type]>=LIMITS[type]
+    ){
+
+      b.classList.add(
+        "disabled"
+      );
+    }
+
+
+    b.innerHTML=
+      `
+      <div class="piece-icon">
+        ${SYMBOLS[color][type]}
+      </div>
+
+      <div class="piece-count">
+        ${counts[type]} / ${LIMITS[type]}
+      </div>
+      `;
+
+
+    b.addEventListener(
+      "click",
+      ()=>{
+
+        if(
+          counts[type]>=LIMITS[type]
+        ){
+          return;
+        }
+
+
+        game.selectedType=
+          type;
+
+        game.erase=false;
+
+        render();
+      }
+    );
+
+
+    paletteEl.appendChild(b);
+  }
+
+
+  document.getElementById(
+    "setupTitle"
+  ).textContent=
+    (
+      color==="w"
+        ? "백"
+        : "흑"
+    )+
+    " 기물 배치";
+
+
+  document.getElementById(
+    "countBox"
+  ).textContent=
+    `현재 ${TYPES.reduce((n,t)=>n+counts[t],0)}/15개 · `+
+    `킹 ${counts.K}/1 · `+
+    `퀸 ${counts.Q}/1 · `+
+    `룩 ${counts.R}/2 · `+
+    `비숍 ${counts.B}/2 · `+
+    `나이트 ${counts.N}/2 · `+
+    `폰 ${counts.P}/8`;
+}
+
+
+/* =========================================================
+   보드
+========================================================= */
+
+function renderBoard(){
+
+  boardEl.innerHTML="";
+
+
+  boardEl.style.gridTemplateColumns=
+    `repeat(${game.size},1fr)`;
+
+  boardEl.style.gridTemplateRows=
+    `repeat(${game.size},1fr)`;
+
+
+  let moves=[];
+
+
+  if(
+    game.phase==="play" &&
+    game.selected!==null
+  ){
+
+    moves=
+      getLegalMoves(
+        game,
+        game.turn
+      ).filter(
+        m=>m.from===game.selected
+      );
+  }
+
+
+  const moveMap=
+    new Map();
+
+
+  for(
+    const move
+    of moves
+  ){
+
+    moveMap.set(
+      move.to,
+      (
+        game.board[move.to] ||
+        move.enPassant
+      )
+        ? "capture"
+        : "move-dot"
+    );
+  }
+
+
+  for(
+    let r=0;
+    r<game.size;
+    r++
+  ){
+
+    for(
+      let c=0;
+      c<game.size;
+      c++
+    ){
+
+      const i=
+        idx(r,c);
+
+
+      const square=
+        document.createElement(
+          "button"
+        );
+
+
+      square.type="button";
+
+
+      square.className=
+        "square "+
+        (
+          (r+c)%2===0
+            ? "light"
+            : "dark"
+        );
+
+
+      if(
+        game.phase==="setup" &&
+        canSetup(
+          game.setupSide,
+          r,
+          game.selectedType
+        )
+      ){
+
+        square.classList.add(
+          "allowed"
+        );
+      }
+
+
+      if(
+        game.selected===i
+      ){
+
+        square.classList.add(
+          "selected"
+        );
+      }
+
+
+      if(
+        moveMap.has(i)
+      ){
+
+        square.classList.add(
+          moveMap.get(i)
+        );
+      }
+
+
+      const p=
+        game.board[i];
+
+
+      if(
+        p &&
+        p.type==="K" &&
+        isCheck(
+          game,
+          p.color
+        )
+      ){
+
+        square.classList.add(
+          "check"
+        );
+      }
+
+
+      if(p){
+
+        const pieceEl=
+          document.createElement(
+            "span"
+          );
+
+
+        pieceEl.className=
+          "piece "+
+          (
+            p.color==="w"
+              ? "white"
+              : "black"
+          );
+
+
+        pieceEl.textContent=
+          SYMBOLS[
+            p.color
+          ][
+            p.type
+          ];
+
+
+        square.appendChild(
+          pieceEl
+        );
+      }
+
+
+      const file=
+        document.createElement(
+          "span"
+        );
+
+
+      file.className=
+        "coord file";
+
+      file.textContent=
+        "ABCDEFGHIJ"[c] || "";
+
+      square.appendChild(
+        file
+      );
+
+
+      const rank=
+        document.createElement(
+          "span"
+        );
+
+
+      rank.className=
+        "coord rank";
+
+      rank.textContent=
+        game.size-r;
+
+
+      square.appendChild(
+        rank
+      );
+
+
+      /*
+        클릭 하나로 통일.
+        버튼 위에 piece가 있어도 pointer-events:none이라
+        항상 square 버튼이 클릭됨.
+      */
+
+      square.addEventListener(
+        "click",
+        async ()=>{
+          
+          if(
+            game.phase==="setup"
+          ){
+
+            await putSetupPiece(i);
+
+          }else{
+
+            await playSquare(i);
+          }
+
+        }
+      );
+
+
+      boardEl.appendChild(
+        square
+      );
+    }
+  }
+
+
+  applyFlip();
+}
+
+
+/* =========================================================
+   뒤집기
+========================================================= */
+
+function applyFlip(){
+
+  if(game.flipped){
+
+    boardEl.style.transform=
+      "rotate(180deg)";
+
+
+    boardEl
+      .querySelectorAll(
+        ".piece,.coord"
+      )
+      .forEach(
+        e=>{
+          e.style.transform=
+            "rotate(180deg)";
+        }
+      );
+
+  }else{
+
+    boardEl.style.transform="";
+
+
+    boardEl
+      .querySelectorAll(
+        ".piece,.coord"
+      )
+      .forEach(
+        e=>{
+          e.style.transform="";
+        }
+      );
+  }
+}
+
+
+/* =========================================================
+   상태
+========================================================= */
+
+function renderStatus(){
+
+  const title=
+    document.getElementById(
+      "statusTitle"
+    );
+
+  const badge=
+    document.getElementById(
+      "statusBadge"
+    );
+
+  const sub=
+    document.getElementById(
+      "statusSub"
+    );
+
+
+  badge.className=
+    "badge";
+
+
+  if(
+    playMode==="online"
+  ){
+
+    if(
+      online.waiting
+    ){
+
+      title.textContent=
+        "온라인 방 대기 중";
+
+      badge.textContent=
+        "WAIT";
+
+      badge.classList.add(
+        "green"
+      );
+
+      sub.textContent=
+        "상대가 6자리 방코드로 참가하면 시작할 수 있습니다.";
+
+      return;
+    }
+  }
+
+
+  if(
+    game.phase==="setup"
+  ){
+
+    const color=
+      game.setupSide;
+
+
+    title.textContent=
+      (
+        color==="w"
+          ? "백"
+          : "흑"
+      )+
+      " 기물 배치";
+
+
+    if(
+      playMode==="online"
+    ){
+
+      if(
+        online.role===
+        color
+      ){
+
+        badge.textContent=
+          color==="w"
+            ? "MY WHITE"
+            : "MY BLACK";
+
+        badge.classList.add(
+          "green"
+        );
+
+        sub.textContent=
+          "내 배치 차례입니다. 기물을 선택하고 칸을 눌러주세요.";
+
+      }else{
+
+        badge.textContent=
+          "OPPONENT";
+
+        badge.classList.add(
+          "black"
+        );
+
+        sub.textContent=
+          "상대방이 기물을 배치하고 있습니다.";
+      }
+
+    }else{
+
+      badge.textContent=
+        color==="w"
+          ? "WHITE"
+          : "BLACK";
+
+      badge.classList.add(
+        color==="w"
+          ? "white"
+          : "black"
+      );
+
+      sub.textContent=
+        "기물을 선택하고 원하는 칸을 눌러주세요.";
+    }
+
+    return;
+  }
+
+
+  if(
+    game.phase==="over"
+  ){
+
+    const checked=
+      isCheck(
+        game,
+        game.turn
+      );
+
+
+    if(checked){
+
+      title.textContent=
+        (
+          other(game.turn)==="w"
+            ? "백"
+            : "흑"
+        )+
+        " 승리 - 체크메이트";
+
+    }else{
+
+      title.textContent=
+        "무승부 - 스테일메이트";
+    }
+
+
+    badge.textContent=
+      "GAME OVER";
+
+    badge.classList.add(
+      "black"
+    );
+
+    sub.textContent=
+      "새 게임으로 다시 시작할 수 있습니다.";
+
+    return;
+  }
+
+
+  const checked=
+    isCheck(
+      game,
+      game.turn
+    );
+
+
+  title.textContent=
+    (
+      game.turn==="w"
+        ? "백"
+        : "흑"
+    )+
+    " 차례"+
+    (
+      checked
+        ? " - 체크!"
+        : ""
+    );
+
+
+  if(
+    playMode==="online"
+  ){
+
+    if(
+      online.role===
+      game.turn
+    ){
+
+      badge.textContent=
+        game.turn==="w"
+          ? "MY WHITE"
+          : "MY BLACK";
+
+      badge.classList.add(
+        "green"
+      );
+
+      sub.textContent=
+        checked
+          ? "내 킹이 체크입니다. 체크를 해결하세요."
+          : "내 차례입니다.";
+
+    }else{
+
+      badge.textContent=
+        "OPPONENT";
+
+      badge.classList.add(
+        "black"
+      );
+
+      sub.textContent=
+        "상대방 차례입니다.";
+    }
+
+
+    return;
+  }
+
+
+  if(
+    playMode==="ai" &&
+    game.turn===aiSide
+  ){
+
+    badge.textContent=
+      "AI";
+
+    badge.classList.add(
+      "purple"
+    );
+
+    sub.textContent=
+      "AI가 생각 중입니다.";
+
+  }else{
+
+    badge.textContent=
+      game.turn==="w"
+        ? "WHITE"
+        : "BLACK";
+
+    badge.classList.add(
+      game.turn==="w"
+        ? "white"
+        : "black"
+    );
+
+    sub.textContent=
+      checked
+        ? "체크를 해결하세요."
+        : "기물을 누른 뒤 이동할 칸을 누르세요.";
+  }
+}
+
+
+/* =========================================================
+   기록
+========================================================= */
+
+function renderHistory(){
+
+  const box=
+    document.getElementById(
+      "moves"
+    );
+
+
+  box.innerHTML="";
+
+
+  if(
+    !game.history.length
+  ){
+
+    box.innerHTML=
+      '<div style="color:#718096;font-size:12px">아직 이동 기록이 없습니다.</div>';
+
+    return;
+  }
+
+
+  for(
+    let i=0;
+    i<game.history.length;
+    i+=2
+  ){
+
+    const row=
+      document.createElement(
+        "div"
+      );
+
+
+    row.className=
+      "move-row";
+
+
+    const number=
+      document.createElement(
+        "div"
+      );
+
+
+    number.className=
+      "move-number";
+
+
+    number.textContent=
+      (
+        Math.floor(i/2)+
+        1
+      )+
+      ".";
+
+
+    const white=
+      document.createElement(
+        "div"
+      );
+
+
+    white.textContent=
+      game.history[i]?.text ||
+      "";
+
+
+    const black=
+      document.createElement(
+        "div"
+      );
+
+
+    black.textContent=
+      game.history[i+1]?.text ||
+      "";
+
+
+    row.appendChild(
+      number
+    );
+
+    row.appendChild(
+      white
+    );
+
+    row.appendChild(
+      black
+    );
+
+
+    box.appendChild(
+      row
+    );
+  }
+
+
+  box.scrollTop=
+    box.scrollHeight;
+}
+
+
+/* =========================================================
+   전체 렌더
+========================================================= */
+
+function render(){
+
+  document.getElementById(
+    "title"
+  ).textContent=
+    game.mode==="variant"
+      ? "10×10 배치 체스"
+      : "일반 8×8 체스";
+
+
+  document.getElementById(
+    "modeBtn"
+  ).textContent=
+    game.mode==="variant"
+      ? "일반 체스로"
+      : "10×10 배치로";
+
+
+  /*
+    온라인이면 모드는 방장이 결정.
+  */
+
+  document.getElementById(
+    "modeBtn"
+  ).disabled=
+    playMode==="online" &&
+    !!online.code;
+
+
+  renderStatus();
+  renderPalette();
+  renderBoard();
+  renderHistory();
+
+
+  if(
+    playMode==="online"
+  ){
+
+    updateOnlineUI();
+  }
+}
+
+
+/* =========================================================
+   AI 배치
+========================================================= */
+
+function aiSetup(){
+
+  if(
+    playMode!=="ai" ||
+    game.phase!=="setup" ||
+    game.setupSide!==aiSide
+  ){
+
+    return;
+  }
+
+
+  const color=
+    aiSide;
+
+
+  game.board=
+    game.board.map(
+      p =>
+        p &&
+        p.color===color
+          ? null
+          : p
+    );
+
+
+  const list=[];
+
+
+  for(
+    const type
+    of TYPES
+  ){
+
+    for(
+      let i=0;
+      i<LIMITS[type];
+      i++
+    ){
+
+      list.push(type);
+    }
+  }
+
+
+  const priority={
+    K:0,
+    Q:1,
+    R:2,
+    B:3,
+    N:4,
+    P:5
+  };
+
+
+  list.sort(
+    (a,b)=>
+      priority[a]-priority[b]
+  );
+
+
+  for(
+    const type
+    of list
+  ){
+
+    const possible=[];
+
+
+    for(
+      let i=0;
+      i<game.board.length;
+      i++
+    ){
+
+      if(
+        game.board[i]
+      ){
+        continue;
+      }
+
+
+      const {r}=
+        rc(i);
+
+
+      if(
+        canSetup(
+          color,
+          r,
+          type
+        )
+      ){
+
+        possible.push(i);
+      }
+    }
+
+
+    if(
+      possible.length
+    ){
+
+      const chosen=
+        possible[
+          Math.floor(
+            Math.random()*
+            possible.length
+          )
+        ];
+
+
+      game.board[chosen]=
+        makePiece(
+          color,
+          type
+        );
+    }
+  }
+
+
+  game.setupDone[color]=true;
+
+
+  if(color==="w"){
+
+    game.setupSide="b";
+
+  }else{
+
+    if(
+      validStartingPosition(
+        game
+      )
+    ){
+
+      game.phase="play";
+      game.turn="w";
+    }
+  }
+
+
+  render();
+}
+
+
+/* =========================================================
+   AI
+========================================================= */
+
+function evaluateState(state,perspective){
+
+  let score=0;
+
+
+  for(
+    const p
+    of state.board
+  ){
+
+    if(!p){
+      continue;
+    }
+
+
+    let value=
+      VALUES[p.type];
+
+
+    if(
+      p.type==="P"
+    ){
+
+      value+=10;
+    }
+
+
+    if(
+      p.color===
+      perspective
+    ){
+
+      score+=value;
+
+    }else{
+
+      score-=value;
+    }
+  }
+
+
+  return score;
+}
+
+
+function aiTurn(){
+
+  if(
+    playMode!=="ai" ||
+    game.phase!=="play" ||
+    game.turn!==aiSide ||
+    game.aiBusy
+  ){
+
+    return;
+  }
+
+
+  game.aiBusy=true;
+
+  render();
+
+
+  setTimeout(
+    ()=>{
+      
+      const moves=
+        getLegalMoves(
+          game,
+          aiSide
+        );
+
+
+      if(
+        !moves.length
+      ){
+
+        game.aiBusy=false;
+        render();
+
+        return;
+      }
+
+
+      let chosen=null;
+
+
+      if(
+        difficulty==="easy"
+      ){
+
+        chosen=
+          moves[
+            Math.floor(
+              Math.random()*
+              moves.length
+            )
+          ];
+
+      }else{
+
+        let best=
+          -Infinity;
+
+        const candidates=[];
+
+
+        for(
+          const move
+          of moves
+        ){
+
+          const next=
+            applyMove(
+              game,
+              move
+            );
+
+
+          let score=
+            evaluateState(
+              next,
+              aiSide
+            );
+
+
+          if(
+            move.capture
+          ){
+
+            score+=100;
+          }
+
+
+          if(
+            difficulty==="hard"
+          ){
+
+            const enemyMoves=
+              getLegalMoves(
+                next,
+                other(aiSide)
+              );
+
+
+            if(
+              enemyMoves.length
+            ){
+
+              let worst=
+                Infinity;
+
+
+              for(
+                const reply
+                of enemyMoves
+              ){
+
+                const after=
+                  applyMove(
+                    next,
+                    reply
+                  );
+
+
+                worst=
+                  Math.min(
+                    worst,
+                    evaluateState(
+                      after,
+                      aiSide
+                    )
+                  );
+              }
+
+
+              score=
+                worst;
+            }
+          }
+
+
+          if(score>best){
+
+            best=score;
+
+            candidates.length=0;
+
+            candidates.push(
+              move
+            );
+
+          }else if(
+            score===best
+          ){
+
+            candidates.push(
+              move
+            );
+          }
+        }
+
+
+        chosen=
+          candidates[
+            Math.floor(
+              Math.random()*
+              candidates.length
+            )
+          ];
+      }
+
+
+      game.aiBusy=false;
+
+
+      if(chosen){
+
+        executeMove(
+          chosen
+        );
+      }
+
+    },
+    difficulty==="hard"
+      ? 420
+      : 230
+  );
+}
+
+
+/* =========================================================
+   프로모션
+========================================================= */
+
+function openPromotion(color){
+
+  promotionButtons.innerHTML="";
+
+
+  for(
+    const type
+    of ["Q","R","B","N"]
+  ){
+
+    const button=
+      document.createElement(
+        "button"
+      );
+
+
+    button.textContent=
+      SYMBOLS[color][type];
+
+
+    button.addEventListener(
+      "click",
+      async ()=>{
+
+        const move=
+          promotionMoves.find(
+            m =>
+              m.promotion===type
+          );
+
+
+        promotionMoves=[];
+
+
+        promotionOverlay.classList.add(
+          "hidden"
+        );
+
+
+        if(move){
+
+          await executeMove(
+            move
+          );
+        }
+      }
+    );
+
+
+    promotionButtons.appendChild(
+      button
+    );
+  }
+
+
+  promotionOverlay.classList.remove(
+    "hidden"
+  );
+}
+
+
+/* =========================================================
+   컨트롤 UI
+========================================================= */
+
+function refreshControls(){
+
+  document.getElementById(
+    "aiOptions"
+  ).classList.toggle(
+    "hidden",
+    playMode!=="ai"
+  );
+
+
+  document.getElementById(
+    "onlineCard"
+  ).classList.toggle(
+    "hidden",
+    playMode!=="online"
+  );
+
+
+  if(
+    game.phase!=="setup"
+  ){
+
+    setupCard.classList.add(
+      "hidden"
+    );
+  }
+}
+
+
+/* =========================================================
+   플레이 방식 변경
+========================================================= */
+
+document.getElementById(
+  "playMode"
+).addEventListener(
+  "change",
+  async e=>{
+
+    const next=
+      e.target.value;
+
+
+    if(
+      playMode==="online" &&
+      online.code
+    ){
+
+      await leaveRoom(false);
+    }
+
+
+    playMode=
+      next;
+
+
+    if(
+      playMode==="online"
+    ){
+
+      /*
+        온라인 연결은 여기서만 초기화.
+        따라서 Firebase 오류 때문에
+        체스판 자체가 죽지 않음.
+      */
+
+      await ensureFirebase();
+
+      newLocalGame();
+
+    }else{
+
+      game.mode=
+        "variant";
+
+      newLocalGame();
+    }
+
+
+    refreshControls();
+    render();
+  }
+);
+
+
+/* =========================================================
+   AI 설정
+========================================================= */
+
+document.getElementById(
+  "aiSide"
+).addEventListener(
+  "change",
+  e=>{
+
+    aiSide=
+      e.target.value;
+
+
+    if(
+      playMode==="ai"
+    ){
+
+      newLocalGame();
+    }
+  }
+);
+
+
+document.getElementById(
+  "difficulty"
+).addEventListener(
+  "change",
+  e=>{
+
+    difficulty=
+      e.target.value;
+  }
+);
+
+
+/* =========================================================
+   일반 / 10×10
+========================================================= */
+
+document.getElementById(
+  "modeBtn"
+).addEventListener(
+  "click",
+  ()=>{
+
+    if(
+      playMode==="online" &&
+      online.code
+    ){
+
+      alert(
+        "온라인 방에서는 방장이 정한 게임을 사용합니다."
+      );
+
+      return;
+    }
+
+
+    game.mode=
+      game.mode==="variant"
+        ? "classic"
+        : "variant";
+
+
+    newLocalGame();
+  }
+);
+
+
+/* =========================================================
+   새 게임
+========================================================= */
+
+document.getElementById(
+  "newBtn"
+).addEventListener(
+  "click",
+  async ()=>{
+
+    if(
+      playMode==="online"
+    ){
+
+      if(
+        online.code
+      ){
+
+        alert(
+          "온라인에서는 방장이 방을 새로 만들어야 합니다."
+        );
+
+        return;
+      }
+
+      return;
+    }
+
+
+    newLocalGame();
+  }
+);
+
+
+/* =========================================================
+   다시 시작
+========================================================= */
+
+document.getElementById(
+  "resetBtn"
+).addEventListener(
+  "click",
+  ()=>{
+
+    if(
+      playMode==="online"
+    ){
+
+      alert(
+        "온라인에서는 방 상태가 두 사람에게 공유됩니다. 방을 나간 뒤 새 방을 만들어 주세요."
+      );
+
+      return;
+    }
+
+
+    newLocalGame();
+  }
+);
+
+
+/* =========================================================
+   판 뒤집기
+========================================================= */
+
+document.getElementById(
+  "flipBtn"
+).addEventListener(
+  "click",
+  ()=>{
+
+    game.flipped=
+      !game.flipped;
+
+    render();
+  }
+);
+
+
+/* =========================================================
+   배치 완료
+========================================================= */
+
+document.getElementById(
+  "finishBtn"
+).addEventListener(
+  "click",
+  async ()=>{
+
+    await finishSetup();
+  }
+);
+
+
+/* =========================================================
+   지우개
+========================================================= */
+
+document.getElementById(
+  "eraseBtn"
+).addEventListener(
+  "click",
+  ()=>{
+
+    if(
+      game.phase!=="setup"
+    ){
+
+      return;
+    }
+
+
+    game.erase=
+      !game.erase;
+
+
+    render();
+  }
+);
+
+
+/* =========================================================
+   온라인 방 생성
+========================================================= */
+
+document.getElementById(
+  "createRoomBtn"
+).addEventListener(
+  "click",
+  async ()=>{
+
+    try{
+
+      await createRoom();
+
+    }catch(error){
+
+      console.error(error);
+
+      alert(
+        "방 생성 실패\n"+
+        error.message
+      );
+    }
+  }
+);
+
+
+/* =========================================================
+   온라인 참가
+========================================================= */
+
+document.getElementById(
+  "joinRoomBtn"
+).addEventListener(
+  "click",
+  async ()=>{
+
+    try{
+
+      await joinRoom();
+
+    }catch(error){
+
+      console.error(error);
+
+      alert(
+        "방 참가 실패\n"+
+        error.message
+      );
+    }
+  }
+);
+
+
+/* =========================================================
+   방 나가기
+========================================================= */
+
+document.getElementById(
+  "leaveRoomBtn"
+).addEventListener(
+  "click",
+  async ()=>{
+
+    await leaveRoom(true);
+
+    render();
+  }
+);
+
+
+/* =========================================================
+   방코드 복사
+========================================================= */
+
+document.getElementById(
+  "copyRoomBtn"
+).addEventListener(
+  "click",
+  async ()=>{
+
+    if(
+      !online.code
+    ){
+
+      return;
+    }
+
+
+    try{
+
+      await navigator.clipboard.writeText(
+        online.code
+      );
+
+
+      alert(
+        "방코드를 복사했습니다."
+      );
+
+    }catch{
+
+      alert(
+        "방코드: "+
+        online.code
+      );
+    }
+  }
+);
+
+
+/* =========================================================
+   온라인 게임 종류 선택
+========================================================= */
+
+document.getElementById(
+  "onlineGameMode"
+).addEventListener(
+  "change",
+  e=>{
+
+    if(
+      online.code
+    ){
+
+      alert(
+        "이미 만들어진 방의 게임 종류는 변경할 수 없습니다."
+      );
+
+
+      e.target.value=
+        game.mode;
+    }
+  }
+);
+
+
+/* =========================================================
+   시작
+========================================================= */
+
+newLocalGame();
+
+refreshControls();
+
+/*
+  중요:
+  시작 시 Firebase 연결을 강제로 하지 않습니다.
+  그래서 Firebase 설정이 없어도
+  체스판과 모든 버튼은 정상적으로 작동합니다.
+*/
+
+render();
+
+</script>
+
+</body>
+</html>
