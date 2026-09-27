@@ -3803,21 +3803,33 @@ async function putSetupPiece(i){
         onlineRole
       ){
 
-        send({
-          type:"setup-erase",
-          index:i
-        });
+        if(isHost){
+          hostSetupErase(i);
+        }else{
+          send({
+            type:"setup-erase",
+            index:i
+          });
+        }
       }
 
       return;
     }
 
 
-    send({
-      type:"setup-place",
-      index:i,
-      typeName:game.selectedType
-    });
+    /* 방장은 자신의 배치를 직접 처리 */
+    if(isHost){
+      hostSetupPlace(
+        i,
+        game.selectedType
+      );
+    }else{
+      send({
+        type:"setup-place",
+        index:i,
+        typeName:game.selectedType
+      });
+    }
 
     return;
   }
@@ -3914,9 +3926,13 @@ async function finishSetup(){
     }
 
 
-    send({
-      type:"setup-finish"
-    });
+    if(isHost){
+      hostFinishSetup();
+    }else{
+      send({
+        type:"setup-finish"
+      });
+    }
 
     return;
   }
